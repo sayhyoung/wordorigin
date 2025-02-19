@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>귀여운 영어 단어 챗봇</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background: url('img1.jpg') no-repeat center center fixed;
+      background-size: cover;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      max-width: 600px;
+      width: 90%;
+      background-color: rgba(255, 255, 255, 0.9);
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+      overflow: hidden;
+      padding: 20px;
+    }
+    .header {
+      background-color: #ffcc00;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+      border-radius: 12px 12px 0 0;
+    }
+    .chat-container {
+      height: 400px;
+      overflow-y: auto;
+      padding: 15px;
+      border: 2px solid #ffcc00;
+      background: #fffbe5;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+    }
+    .chat-message {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 8px;
+      max-width: 80%;
+    }
+    .bot-message {
+      background-color: #ffeb99;
+      align-self: flex-start;
+      text-align: left;
+      flex-direction: row;
+    }
+    .user-message {
+      background-color: #d1e7dd;
+      text-align: right;
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+    .profile-img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+    .user-message .profile-img {
+      margin-left: 10px;
+      margin-right: 0;
+    }
+    .input-container {
+      display: flex;
+      gap: 10px;
+    }
+    .input-container input {
+      flex: 1;
+      padding: 12px;
+      border-radius: 8px;
+      border: 2px solid #ffcc00;
+      font-size: 16px;
+    }
+    .input-container button {
+      padding: 12px;
+      border: none;
+      background-color: #ffcc00;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .input-container button:hover {
+      background-color: #ffaa00;
+    }
+    .input-container button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">🐣 영단어 어원박사 🐣</div>
+
+    <!-- 채팅창 -->
+    <div class="chat-container" id="chat-container">
+      <div class="chat-message bot-message">
+        <img src="puki.png" class="profile-img" alt="챗봇">
+        <p>안녕! 궁금한 영어 단어를 입력해 줘! ✨</p>
+      </div>
+    </div>
+
+    <!-- 입력 폼 -->
+    <div class="input-container">
+      <input type="text" id="user-input" placeholder="예: example" onkeypress="handleKeyPress(event)">
+      <button id="send-button" onclick="sendMessage()">보내기</button>
+    </div>
+  </div>
+  
+  <script src="api-key.js"></script>
+  <script>
+    async function getApiKey() {
+      return typeof API_KEY !== "undefined" ? API_KEY : null;
+    }
+  </script>
+  <script>
+    const API_URL = "https://api.openai.com/v1/chat/completions";
+    const TYPING_SPEED = 30;  // 🟢 타이핑 속도 설정
+    const botImage = "puki.png";  // 🟢 챗봇 프로필 이미지
+    const userImage = "student.png";  // 🟢 유저 프로필 이미지
+
+    async function getApiKey() {
+      try {
+        const response = await fetch('/api-key');  // GitHub Actions에서 API 키를 불러오는 엔드포인트
+        const data = await response.json();
+        return data.apiKey;
+      } catch (error) {
+        console.error("API 키를 가져오지 못했습니다.", error);
+        return null;
+      }
+    }
+
+    function handleKeyPress(event) {
+      if (event.key === "Enter") {
+        sendMessage();
+      }
+    }
+
+    async function sendMessage() {
+      const inputField = document.getElementById('user-input');
+      const sendButton = document.getElementById('send-button');
+      const message = inputField.value.trim();
+      if (message === '') return;
+
+      sendButton.disabled = true;
+      appendMessage('user', message);
+      inputField.value = '';
+
+      try {
+        const apiKey = await getApiKey();
+        if (!apiKey) {
+          throw new Error("API 키가 없습니다.");
+        }
+
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [
+              { role: "system", content: "당신은 초등학생도 쉽게 이해할 수 있도록 영어 단어와 어원을 친절하게 설명하는 AI 튜터입니다. 단어 뜻을 설명한 후, 쉬운 예문도 함께 제공하세요." },
+              { role: "user", content: message }
+            ]
+          })
+        });
+
+        const data = await response.json();
+        const reply = data.choices?.[0]?.message?.content || "😞 답변을 받아오지 못했어요. 다시 시도해 주세요.";
+
+        appendMessage('bot', reply);
+      } catch (error) {
+        console.error(error);
+        appendMessage('bot', "⚠️ 서버 오류가 발생했어요.");
+      } finally {
+        sendButton.disabled = false;
+      }
+    }
+
+    function appendMessage(sender, message) {
+      const chatContainer = document.getElementById('chat-container');
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `chat-message ${sender}-message`;
+
+      const profileImg = document.createElement('img');
+      profileImg.src = sender === 'user' ? userImage : botImage;
+      profileImg.className = 'profile-img';
+
+      const textElement = document.createElement('p');
+      textElement.innerHTML = message.replace(/\n/g, "<br>");
+
+      messageDiv.appendChild(profileImg);
+      messageDiv.appendChild(textElement);
+      chatContainer.appendChild(messageDiv);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+  </script>
+</body>
+</html>
