@@ -122,28 +122,12 @@
     </div>
   </div>
   
-  <script src="api-key.js"></script>
   <script>
-    async function getApiKey() {
-      return typeof API_KEY !== "undefined" ? API_KEY : null;
-    }
-  </script>
-  <script>
-    const API_URL = "https://api.openai.com/v1/chat/completions";
-    const TYPING_SPEED = 30;  // 🟢 타이핑 속도 설정
-    const botImage = "puki.png";  // 🟢 챗봇 프로필 이미지
-    const userImage = "student.png";  // 🟢 유저 프로필 이미지
+    // Cloudflare Worker의 엔드포인트 URL (예: "https://your-worker-id.yourdomain.workers.dev/chat")
+    const WORKER_URL = "https://wordorigin.sehyunglee2015.workers.dev/chat";
 
-    async function getApiKey() {
-      try {
-        const response = await fetch('/api-key');  // GitHub Actions에서 API 키를 불러오는 엔드포인트
-        const data = await response.json();
-        return data.apiKey;
-      } catch (error) {
-        console.error("API 키를 가져오지 못했습니다.", error);
-        return null;
-      }
-    }
+    const botImage = "puki.png";     // 챗봇 프로필 이미지
+    const userImage = "student.png"; // 유저 프로필 이미지
 
     function handleKeyPress(event) {
       if (event.key === "Enter") {
@@ -155,41 +139,41 @@
       const inputField = document.getElementById('user-input');
       const sendButton = document.getElementById('send-button');
       const message = inputField.value.trim();
-      if (message === '') return;
+      if (!message) return;
 
+      // 전송 버튼 비활성화
       sendButton.disabled = true;
+
+      // 사용자가 입력한 메시지를 채팅창에 표시
       appendMessage('user', message);
       inputField.value = '';
 
       try {
-        const apiKey = await getApiKey();
-        if (!apiKey) {
-          throw new Error("API 키가 없습니다.");
-        }
-
-        const response = await fetch(API_URL, {
-          method: 'POST',
+        // Cloudflare Worker에 메시지 전달
+        const response = await fetch(WORKER_URL, {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            model: "gpt-4o-mini",
-            messages: [
-              { role: "system", content: "당신은 초등학생도 쉽게 이해할 수 있도록 영어 단어와 어원을 친절하게 설명하는 AI 튜터입니다. 단어 뜻을 설명한 후, 쉬운 예문도 함께 제공하세요." },
-              { role: "user", content: message }
-            ]
+            userMessage: message
           })
         });
 
         const data = await response.json();
-        const reply = data.choices?.[0]?.message?.content || "😞 답변을 받아오지 못했어요. 다시 시도해 주세요.";
-
-        appendMessage('bot', reply);
+        if (data.error) {
+          // 오류 발생 시 표시
+          appendMessage('bot', `⚠️ 서버 오류가 발생했습니다: ${data.error}`);
+        } else {
+          // OpenAI의 응답 내용
+          const reply = data.reply || "😞 답변을 받아오지 못했어요. 다시 시도해 주세요.";
+          appendMessage('bot', reply);
+        }
       } catch (error) {
         console.error(error);
-        appendMessage('bot', "⚠️ 서버 오류가 발생했어요.");
+        appendMessage('bot', "⚠️ 네트워크 오류가 발생했어요.");
       } finally {
+        // 전송 버튼 다시 활성화
         sendButton.disabled = false;
       }
     }
@@ -204,11 +188,14 @@
       profileImg.className = 'profile-img';
 
       const textElement = document.createElement('p');
+      // 개행 문자 처리
       textElement.innerHTML = message.replace(/\n/g, "<br>");
 
       messageDiv.appendChild(profileImg);
       messageDiv.appendChild(textElement);
       chatContainer.appendChild(messageDiv);
+
+      // 스크롤 자동 이동
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
   </script>
