@@ -123,11 +123,12 @@
   </div>
   
   <script>
-    // Cloudflare Worker의 엔드포인트 URL (예: "https://your-worker-id.yourdomain.workers.dev/chat")
+    // Cloudflare Worker의 엔드포인트 (API 키는 Worker에서 보호됨)
+    // 예) https://my-unique-worker-id.mydomain.workers.dev/chat
     const WORKER_URL = "https://wordorigin.sehyunglee2015.workers.dev/chat";
 
-    const botImage = "puki.png";     // 챗봇 프로필 이미지
-    const userImage = "student.png"; // 유저 프로필 이미지
+    const botImage = "puki.png";       // 챗봇 프로필 이미지
+    const userImage = "student.png";   // 유저 프로필 이미지
 
     function handleKeyPress(event) {
       if (event.key === "Enter") {
@@ -144,41 +145,45 @@
       // 전송 버튼 비활성화
       sendButton.disabled = true;
 
-      // 사용자가 입력한 메시지를 채팅창에 표시
-      appendMessage('user', message);
+      // 1) 사용자가 입력한 메시지 표시
+      appendMessage('user', message, false);
       inputField.value = '';
 
       try {
-        // Cloudflare Worker에 메시지 전달
+        // 2) Cloudflare Worker로 사용자 메시지 전송
         const response = await fetch(WORKER_URL, {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({
-            userMessage: message
-          })
+          body: JSON.stringify({ userMessage: message })
         });
 
         const data = await response.json();
         if (data.error) {
-          // 오류 발생 시 표시
-          appendMessage('bot', `⚠️ 서버 오류가 발생했습니다: ${data.error}`);
+          // 오류가 있으면 표시
+          appendMessage('bot', `⚠️ 서버 오류가 발생했습니다: ${data.error}`, false);
         } else {
-          // OpenAI의 응답 내용
+          // 3) 답변 텍스트를 봇 메시지로 출력 (타자 치듯이 서서히 표시)
           const reply = data.reply || "😞 답변을 받아오지 못했어요. 다시 시도해 주세요.";
-          appendMessage('bot', reply);
+          appendMessage('bot', reply, true);  // streaming = true
         }
       } catch (error) {
         console.error(error);
-        appendMessage('bot', "⚠️ 네트워크 오류가 발생했어요.");
+        appendMessage('bot', "⚠️ 네트워크 오류가 발생했어요.", false);
       } finally {
-        // 전송 버튼 다시 활성화
+        // 전송 버튼 활성화
         sendButton.disabled = false;
       }
     }
 
-    function appendMessage(sender, message) {
+    /**
+     * 메시지를 채팅창에 추가.
+     * - sender: 'user' | 'bot'
+     * - text: 표시할 문자열
+     * - streaming: true면 글자가 서서히 찍히도록 처리
+     */
+    function appendMessage(sender, text, streaming = false) {
       const chatContainer = document.getElementById('chat-container');
       const messageDiv = document.createElement('div');
       messageDiv.className = `chat-message ${sender}-message`;
@@ -186,17 +191,36 @@
       const profileImg = document.createElement('img');
       profileImg.src = sender === 'user' ? userImage : botImage;
       profileImg.className = 'profile-img';
-
-      const textElement = document.createElement('p');
-      // 개행 문자 처리
-      textElement.innerHTML = message.replace(/\n/g, "<br>");
-
       messageDiv.appendChild(profileImg);
-      messageDiv.appendChild(textElement);
-      chatContainer.appendChild(messageDiv);
 
-      // 스크롤 자동 이동
+      // 채팅 텍스트 영역
+      const textElement = document.createElement('p');
+      messageDiv.appendChild(textElement);
+
+      chatContainer.appendChild(messageDiv);
       chatContainer.scrollTop = chatContainer.scrollHeight;
+
+      if (streaming) {
+        // (1) 전체 텍스트에서 \n -> <br> 변환만 미리 해두고...
+        const htmlMessage = text.replace(/\n/g, "<br>");
+        // (2) 한 글자씩 출력하는 함수
+        let i = 0;
+        const intervalSpeed = 20; // 숫자가 작을수록 빠른 표시 (ms)
+
+        const typingInterval = setInterval(() => {
+          i++;
+          textElement.innerHTML = htmlMessage.slice(0, i);
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+
+          if (i >= htmlMessage.length) {
+            clearInterval(typingInterval);
+          }
+        }, intervalSpeed);
+      } else {
+        // 스트리밍 불필요할 때는 한 번에 표시
+        textElement.innerHTML = text.replace(/\n/g, "<br>");
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
     }
   </script>
 </body>
