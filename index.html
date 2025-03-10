@@ -2,8 +2,11 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
+  <!-- 반응형 페이지를 위해 추가한 메타 태그 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>영어 단어 어원 박사</title>
   <style>
+    /* 기본 페이지 스타일 */
     body {
       font-family: 'Arial', sans-serif;
       background: url('img1.jpg') no-repeat center center fixed;
@@ -13,8 +16,11 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      /* PC 등 큰 화면에서 세로맞춤 */
       height: 100vh;
     }
+
+    /* 메인 컨테이너: PC일 때는 최대 600px, 화면이 작으면 90% 너비 */
     .container {
       max-width: 600px;
       width: 90%;
@@ -24,6 +30,8 @@
       overflow: hidden;
       padding: 20px;
     }
+
+    /* 헤더 영역 */
     .header {
       background-color: #ffcc00;
       color: white;
@@ -33,7 +41,10 @@
       font-weight: bold;
       border-radius: 12px 12px 0 0;
     }
+
+    /* 채팅 메시지 표시 영역 */
     .chat-container {
+      /* 고정 높이 대신 최대 높이를 두고, 너무 작아지면 미디어 쿼리에서 조정 */
       height: 400px;
       overflow-y: auto;
       padding: 15px;
@@ -44,6 +55,8 @@
       display: flex;
       flex-direction: column;
     }
+
+    /* 채팅 메시지 공통 스타일 */
     .chat-message {
       display: flex;
       align-items: center;
@@ -52,18 +65,22 @@
       border-radius: 8px;
       max-width: 80%;
     }
+    /* 봇 메시지 (왼쪽 정렬) */
     .bot-message {
       background-color: #ffeb99;
       align-self: flex-start;
       text-align: left;
       flex-direction: row;
     }
+    /* 유저 메시지 (오른쪽 정렬) */
     .user-message {
       background-color: #d1e7dd;
       text-align: right;
       align-self: flex-end;
       flex-direction: row-reverse;
     }
+
+    /* 프로필 이미지 */
     .profile-img {
       width: 40px;
       height: 40px;
@@ -74,6 +91,8 @@
       margin-left: 10px;
       margin-right: 0;
     }
+
+    /* 입력창, 버튼 컨테이너 */
     .input-container {
       display: flex;
       gap: 10px;
@@ -101,11 +120,43 @@
       background-color: #cccccc;
       cursor: not-allowed;
     }
+
+    /* -----------------------------
+       미디어 쿼리
+       화면이 600px 이하(모바일/태블릿 작은 화면)일 때 스타일 조정
+    ----------------------------- */
+    @media (max-width: 600px) {
+      body {
+        /* 모바일에서는 height: 100vh가 오히려 과도할 수 있으므로 제거 */
+        height: auto;
+        padding: 20px 0;
+        align-items: flex-start; /* 세로로 스크롤 가능하도록 */
+      }
+      .container {
+        width: 95%;
+        margin: auto;
+        border-radius: 10px;
+        padding: 15px;
+      }
+      .chat-container {
+        height: 300px; /* 화면 작아졌을 때 채팅 높이도 조금 축소 */
+      }
+      .input-container input {
+        font-size: 14px; /* 폰트 조금 줄임 */
+      }
+      .input-container button {
+        font-size: 14px;
+        padding: 10px;
+      }
+      .header {
+        font-size: 18px; /* 헤더 글자 조금 축소 */
+      }
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="header">🐣 영단어 어원박사 🐣</div>
+    <div class="header">🐣 영단어 어원 박사 🐣</div>
 
     <!-- 채팅창 -->
     <div class="chat-container" id="chat-container">
@@ -201,11 +252,10 @@
       chatContainer.scrollTop = chatContainer.scrollHeight;
 
       if (streaming) {
-        // (1) 전체 텍스트에서 \n -> <br> 변환만 미리 해두고...
+        // 한 글자씩 표시할 텍스트
         const htmlMessage = text.replace(/\n/g, "<br>");
-        // (2) 한 글자씩 출력하는 함수
         let i = 0;
-        const intervalSpeed = 20; // 숫자가 작을수록 빠른 표시 (ms)
+        const intervalSpeed = 20; // 작을수록 빠름(ms)
 
         const typingInterval = setInterval(() => {
           i++;
@@ -217,7 +267,6 @@
           }
         }, intervalSpeed);
       } else {
-        // 스트리밍 불필요할 때는 한 번에 표시
         textElement.innerHTML = text.replace(/\n/g, "<br>");
         chatContainer.scrollTop = chatContainer.scrollHeight;
       }
